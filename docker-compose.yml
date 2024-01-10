@@ -1,0 +1,18 @@
+version: "3"
+
+services:
+  bot:
+    container_name: discord-music-bot
+    build:
+      dockerfile: Dockerfile
+    pull_policy: build
+    env_file:
+      - stack.env
+    restart: unless-stopped
+#     networks:
+#       lan:
+
+# networks:
+#   lan:
+#     name: LAN
+#     external: true

@@ -1,0 +1,35 @@
+{
+  "name": "discordjs-v14-template-ts",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "start": "DP_FORCE_YTDL_MOD=\"@distube/ytdl-core\" tsx src/index.ts",
+    "create-migration": "knex --knexfile ./src/libs/database/knexfile.ts migrate:make "
+  },
+  "keywords": [],
+  "author": "MericcaN41",
+  "license": "ISC",
+  "dependencies": {
+    "@discord-player/extractor": "^4.4.2",
+    "@discordjs/opus": "^0.9.0",
+    "@discordjs/rest": "^2.0.1",
+    "@discordjs/voice": "^0.16.0",
+    "@types/node": "^20.6.0",
+    "chalk": "^5.3.0",
+    "date-fns": "^2.30.0",
+    "discord-player": "^6.6.3",
+    "discord.js": "^14.13.0",
+    "dotenv": "^16.3.1",
+    "knex": "^2.5.1",
+    "mysql": "^2.18.1",
+    "ytdl-core": "npm:@distube/ytdl-core@^4.13.0"
+  },
+  "devDependencies": {
+    "tsx": "^3.12.8",
+    "typescript": "^5.2.2"
+  },
+  "overrides": {
+    "discord-api-types": "0.37.20"
+  }
+}
