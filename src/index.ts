@@ -4,9 +4,7 @@ import {
   Client,
   GatewayIntentBits,
   Collection,
-  MessageManager,
   TextChannel,
-  EmbedBuilder,
   Message,
   Events,
   ModalBuilder,
@@ -14,8 +12,7 @@ import {
   TextInputBuilder,
   TextInputStyle,
   InteractionType,
-  ButtonBuilder,
-  ButtonStyle,
+  ModalActionRowComponentBuilder,
 } from "discord.js";
 import { Command, SlashCommand } from "./types";
 import { readdirSync } from "fs";
@@ -113,12 +110,13 @@ client.on(Events.InteractionCreate, async (interaction) => {
         .setCustomId("modify-queue-modal")
         .setTitle("Remove songs from queue");
 
-      const firstActionRow = new ActionRowBuilder().addComponents(
-        new TextInputBuilder()
-          .setCustomId("songToRemove")
-          .setLabel("Give song position to remove")
-          .setStyle(TextInputStyle.Short)
-      );
+      const firstActionRow =
+        new ActionRowBuilder<ModalActionRowComponentBuilder>().addComponents(
+          new TextInputBuilder()
+            .setCustomId("songToRemove")
+            .setLabel("Give song position to remove")
+            .setStyle(TextInputStyle.Short)
+        );
 
       modal.addComponents(firstActionRow);
 
