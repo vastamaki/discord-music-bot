@@ -18,6 +18,7 @@ import { Command, SlashCommand } from "./types";
 import { readdirSync } from "fs";
 import { join } from "path";
 import { GuildQueue, GuildQueuePlayerNode, Player } from "discord-player";
+import { DefaultExtractors } from "@discord-player/extractor";
 import knex from "./libs/database/index";
 import db from "./libs/database/index";
 
@@ -153,9 +154,7 @@ client.on(Events.InteractionCreate, async (interaction) => {
   client.cooldowns = new Collection<string, number>();
   client.player = new Player(client);
 
-  await client.player.extractors.loadDefault();
-
-  client.player.extractors.loadDefault();
+  await client.player.extractors.loadMulti(DefaultExtractors);
 
   client.player.events.on("playerStart", async (queue, track) => {
     const embedMessage = await getEmbedMessage(queue);
