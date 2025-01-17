@@ -3,6 +3,7 @@ import {
   ButtonBuilder,
   ButtonStyle,
   EmbedBuilder,
+  MessageActionRowComponentBuilder,
   SlashCommandBuilder,
 } from "discord.js";
 import db, { tables } from "../libs/database";
@@ -64,9 +65,14 @@ const command: SlashCommand = {
       .setLabel("Nappi")
       .setStyle(ButtonStyle.Secondary);
 
-    const row = new ActionRowBuilder().addComponents(cancel, confirm, ullatus);
+    const row =
+      new ActionRowBuilder<MessageActionRowComponentBuilder>().addComponents(
+        cancel,
+        confirm,
+        ullatus
+      );
 
-    const message = await interaction.channel?.send({
+    const message = await interaction.reply({
       embeds: [embedMessage],
       components: [row],
     });

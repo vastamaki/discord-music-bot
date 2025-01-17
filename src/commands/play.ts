@@ -1,5 +1,5 @@
 import { GuildQueue, GuildQueuePlayerNode, QueryType } from "discord-player";
-import ytdl from "ytdl-core";
+import ytdl from "@distube/ytdl-core";
 import db, { tables } from "../libs/database";
 import { Command } from "../types";
 
@@ -52,9 +52,10 @@ const command: Command = {
       .first();
 
     if (isBannedUrl) {
-      message.channel.send(
-        "homo homo homo homo :D Tällästä paskaa ei täällä kuunnella"
-      );
+      message.reply({
+        content: "homo homo homo homo :D Tällästä paskaa ei täällä kuunnella",
+      });
+
       return;
     }
 
@@ -87,9 +88,9 @@ const command: Command = {
     }
 
     if (foundBannedWord) {
-      message.channel.send(
-        `homo homo homo homo :D Paska biisi on banaanisaarilla`
-      );
+      message.reply({
+        content: "homo homo homo homo :D Paska biisi on banaanisaarilla",
+      });
       return;
     }
 

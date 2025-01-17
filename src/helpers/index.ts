@@ -17,10 +17,10 @@ export const isAdmin = async (guildId: string, authorId: string) => {
 };
 
 export const initGuilds = async (guilds: Guild[]) => {
-  for (const [guildId, guild] of guilds) {
+  for (const guild of guilds) {
     await db("servers")
       .insert({
-        guildId,
+        guildId: guild.id,
         owner: guild.ownerId,
         prefix: ";",
       })
@@ -29,7 +29,7 @@ export const initGuilds = async (guilds: Guild[]) => {
 
     await db("admins")
       .insert({
-        guildId,
+        guildId: guild.id,
         userId: guild.ownerId,
       })
       .onConflict()

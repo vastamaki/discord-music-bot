@@ -1,5 +1,5 @@
 import { SlashCommandBuilder } from "discord.js";
-import ytdl from "ytdl-core";
+import ytdl from "@distube/ytdl-core";
 import db, { tables } from "../libs/database";
 import { SlashCommand } from "../types";
 

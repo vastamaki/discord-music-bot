@@ -9,7 +9,7 @@ import {
   ButtonStyle,
   ActionRowBuilder,
 } from "discord.js";
-import ytdl from "ytdl-core";
+import ytdl from "@distube/ytdl-core";
 import db, { tables } from "../libs/database";
 import { SlashCommand } from "../types";
 
@@ -87,9 +87,10 @@ const banByKeyword = async (interaction: ChatInputCommandInteraction) => {
     interaction.reply(`${keywords} is now in banned list`);
   } catch (err) {
     console.error(err);
-    interaction.channel?.send(
-      `Unable to ban this keyword, it's most likely already banned`
-    );
+
+    interaction.reply({
+      content: `Unable to ban this keyword, it's most likely already banned`,
+    });
   }
 };
 
