@@ -4,7 +4,7 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "start": "DP_FORCE_YTDL_MOD=\"@distube/ytdl-core\" tsx src/index.ts",
+    "start": "tsx src/index.ts",
     "create-migration": "knex --knexfile ./src/libs/database/knexfile.ts migrate:make "
   },
   "keywords": [],
@@ -28,8 +28,5 @@
   "devDependencies": {
     "tsx": "^4.19.2",
     "typescript": "^5.7.3"
-  },
-  "overrides": {
-    "discord-api-types": "0.37.20"
   }
 }
