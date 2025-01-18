@@ -18,9 +18,9 @@ import { Command, SlashCommand } from "./types";
 import { readdirSync } from "fs";
 import { join } from "path";
 import { GuildQueue, GuildQueuePlayerNode, Player } from "discord-player";
-import { DefaultExtractors } from "@discord-player/extractor";
 import knex from "./libs/database/index";
 import db from "./libs/database/index";
+import { YoutubeiExtractor } from "discord-player-youtubei";
 
 const client = new Client({
   intents: [
@@ -154,7 +154,7 @@ client.on(Events.InteractionCreate, async (interaction) => {
   client.cooldowns = new Collection<string, number>();
   client.player = new Player(client);
 
-  await client.player.extractors.loadMulti(DefaultExtractors);
+  await client.player.extractors.register(YoutubeiExtractor, {});
 
   client.player.events.on("playerStart", async (queue, track) => {
     const embedMessage = await getEmbedMessage(queue);
@@ -191,7 +191,7 @@ client.on(Events.InteractionCreate, async (interaction) => {
   client.player.events.on("emptyQueue", async (queue) => {
     const embedMessage = await getEmbedMessage(queue);
 
-    embedMessage.embeds[0].fields[2].value = "Jono on tyhjä.";
+    embedMessage.embeds[0].fields[2].value = "Jono on tyhjä";
 
     await embedMessage.edit({
       embeds: [embedMessage.embeds[0]],
@@ -222,6 +222,28 @@ client.on(Events.InteractionCreate, async (interaction) => {
     const embedMessage = await getEmbedMessage(queue);
 
     embedMessage.embeds[0].fields[2].value = mapQueue(queue);
+
+    await embedMessage.edit({
+      embeds: [embedMessage.embeds[0]],
+    });
+  });
+
+  client.player.events.on("disconnect", async (queue) => {
+    const embedMessage = await getEmbedMessage(queue);
+
+    embedMessage.embeds[0].fields[0].value = "Ikävän hiljaista...";
+    embedMessage.embeds[0].fields[2].value = "Jono on tyhjä";
+
+    await embedMessage.edit({
+      embeds: [embedMessage.embeds[0]],
+    });
+  });
+
+  client.player.events.on("emptyChannel", async (queue) => {
+    const embedMessage = await getEmbedMessage(queue);
+
+    embedMessage.embeds[0].fields[0].value = "Ikävän hiljaista...";
+    embedMessage.embeds[0].fields[2].value = "Jono on tyhjä";
 
     await embedMessage.edit({
       embeds: [embedMessage.embeds[0]],

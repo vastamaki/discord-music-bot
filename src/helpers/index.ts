@@ -35,4 +35,6 @@ export const initGuilds = async (guilds: Guild[]) => {
       .onConflict()
       .ignore();
   }
+
+  console.log("Guilds initialized.");
 };

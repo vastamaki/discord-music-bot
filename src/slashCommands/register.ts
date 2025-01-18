@@ -20,11 +20,11 @@ const command: SlashCommand = {
         .setRequired(true);
     }),
   execute: async (interaction, data) => {
-    // if (interaction.user.id !== data.owner_id) {
-    //   return interaction.reply(
-    //     "You do not have permissions to perform this action"
-    //   );
-    // }
+    if (interaction.user.id !== data.owner_id) {
+      return interaction.reply(
+        "You do not have permissions to perform this action"
+      );
+    }
 
     await db(tables.guilds)
       .update({

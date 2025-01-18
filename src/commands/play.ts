@@ -2,6 +2,7 @@ import { GuildQueue, GuildQueuePlayerNode, QueryType } from "discord-player";
 import ytdl from "@distube/ytdl-core";
 import db, { tables } from "../libs/database";
 import { Command } from "../types";
+import { TextChannel } from "discord.js";
 
 const command: Command = {
   name: "play",
@@ -35,11 +36,20 @@ const command: Command = {
 
     const result = await message.client.player.search(search, {
       requestedBy: message.member,
-      searchEngine: isUrl ? QueryType.YOUTUBE_VIDEO : QueryType.YOUTUBE_SEARCH,
     });
 
     if (result.tracks.length === 0) {
-      return message.reply("No results..");
+      const channel = message.channel as TextChannel;
+
+      const msg = await channel.send({
+        content: "No results found :(",
+      });
+
+      setTimeout(() => {
+        msg.delete();
+      }, 5000);
+
+      return;
     }
 
     const song = result.tracks[0];
@@ -52,7 +62,9 @@ const command: Command = {
       .first();
 
     if (isBannedUrl) {
-      message.reply({
+      const channel = message.channel as TextChannel;
+
+      channel.send({
         content: "homo homo homo homo :D Tällästä paskaa ei täällä kuunnella",
       });
 
@@ -88,7 +100,9 @@ const command: Command = {
     }
 
     if (foundBannedWord) {
-      message.reply({
+      const channel = message.channel as TextChannel;
+
+      channel.send({
         content: "homo homo homo homo :D Paska biisi on banaanisaarilla",
       });
       return;
