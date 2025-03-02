@@ -20,7 +20,7 @@ export const tables = {
 };
 
 const db = knex({
-  client: "mysql",
+  client: "mysql2",
   pool: {
     min: 1,
     max: 1,
