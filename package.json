@@ -4,7 +4,7 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "start": "tsx src/index.ts",
+    "start": "bun --bun run src/index.ts",
     "db:generate": "bun --bun run drizzle-kit generate",
     "db:push": "bun --bun run drizzle-kit push"
   },
