@@ -1,9 +1,9 @@
-import { GuildQueuePlayerNode } from "discord-player";
-import { Command } from "../types";
+import { GuildQueuePlayerNode } from 'discord-player';
+import type { Command } from 'src/types';
 
 const command: Command = {
-  name: "skip",
-  aliases: ["s"],
+  name: 'skip',
+  aliases: ['s'],
   permissions: [],
   execute: async (message) => {
     if (!message.guildId) return;

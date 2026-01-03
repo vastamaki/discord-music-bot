@@ -1,57 +1,46 @@
-import { Interaction } from "discord.js";
-import db, { tables } from "../libs/database";
-import { BotEvent } from "../types";
+import type { Interaction } from 'discord.js';
+import { guilds } from 'src/lib/db/services';
+import type { BotEvent } from '../types';
 
 const event: BotEvent = {
-  name: "interactionCreate",
+  name: 'interactionCreate',
   execute: async (interaction: Interaction) => {
-    const data = await db(tables.guilds)
-      .select("*")
-      .where("id", "=", interaction.guildId)
-      .first();
+    if (!interaction.guildId) return;
+
+    const data = await guilds.findGuildById(interaction.guildId);
 
     if (interaction.isChatInputCommand()) {
-      let command = interaction.client.slashCommands.get(
-        interaction.commandName
-      );
-      let cooldown = interaction.client.cooldowns.get(
-        `${interaction.commandName}-${interaction.user.username}`
-      );
+      const command = interaction.client.slashCommands.get(interaction.commandName);
+      const cooldown = interaction.client.cooldowns.get(`${interaction.commandName}-${interaction.user.username}`);
       if (!command) return;
       if (command.cooldown && cooldown) {
         if (Date.now() < cooldown) {
           interaction.reply(
             `You have to wait ${Math.floor(
-              Math.abs(Date.now() - cooldown) / 1000
-            )} second(s) to use this command again.`
+              Math.abs(Date.now() - cooldown) / 1000,
+            )} second(s) to use this command again.`,
           );
           setTimeout(() => interaction.deleteReply(), 5000);
           return;
         }
         interaction.client.cooldowns.set(
           `${interaction.commandName}-${interaction.user.username}`,
-          Date.now() + command.cooldown * 1000
+          Date.now() + command.cooldown * 1000,
         );
         setTimeout(() => {
-          interaction.client.cooldowns.delete(
-            `${interaction.commandName}-${interaction.user.username}`
-          );
+          interaction.client.cooldowns.delete(`${interaction.commandName}-${interaction.user.username}`);
         }, command.cooldown * 1000);
       } else if (command.cooldown && !cooldown) {
         interaction.client.cooldowns.set(
           `${interaction.commandName}-${interaction.user.username}`,
-          Date.now() + command.cooldown * 1000
+          Date.now() + command.cooldown * 1000,
         );
       }
       command.execute(interaction, data);
     } else if (interaction.isAutocomplete()) {
-      const command = interaction.client.slashCommands.get(
-        interaction.commandName
-      );
+      const command = interaction.client.slashCommands.get(interaction.commandName);
       if (!command) {
-        console.error(
-          `No command matching ${interaction.commandName} was found.`
-        );
+        console.error(`No command matching ${interaction.commandName} was found.`);
         return;
       }
       try {

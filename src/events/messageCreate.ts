@@ -1,62 +1,53 @@
-import { ChannelType, Message } from "discord.js";
-import { checkPermissions, sendTimedMessage } from "../functions";
-import db, { tables } from "../libs/database";
-import { BotEvent } from "../types";
+import { ChannelType, type Message } from 'discord.js';
+import { guilds } from 'src/lib/db/services';
+import { checkPermissions, sendTimedMessage } from '../functions';
+import type { BotEvent, Command } from '../types';
 
 const event: BotEvent = {
-  name: "messageCreate",
+  name: 'messageCreate',
   execute: async (message: Message) => {
     if (!message.member || message.member.user.bot) return;
 
-    if (!message.guild) return;
+    if (!message.guild || !message.guildId) return;
 
-    const data = await db(tables.guilds)
-      .select("*")
-      .where("id", "=", message.guildId)
-      .first();
+    const data = await guilds.findGuildById(message.guildId);
 
-    if (
-      data.music_channel_id === message.channelId &&
-      !message.content.startsWith(data.prefix)
-    ) {
-      if (message.content === "skip") {
-        const { default: func } = await import("../commands/skip");
+    if (!data) return;
+
+    if (data.musicChannelId === message.channelId && !message.content.startsWith(data.prefix)) {
+      if (message.content === 'skip') {
+        const { default: func } = await import('../commands/skip');
 
         func.execute(message, [], data);
         return;
       }
 
-      const { default: func } = await import("../commands/play");
+      const { default: func } = await import('../commands/play');
 
-      func.execute(message, ["play", ...message.content.split(" ")], data);
+      func.execute(message, ['play', ...message.content.split(' ')], data);
     }
 
     if (!message.content.startsWith(data.prefix)) return;
     if (message.channel.type !== ChannelType.GuildText) return;
 
-    let args = message.content.substring(data.prefix.length).split(" ");
+    const args = message.content.substring(data.prefix.length).split(' ');
     let command = message.client.commands.get(args[0]);
 
     if (!command) {
-      let commandFromAlias = message.client.commands.find((command) =>
-        command.aliases.includes(args[0])
-      );
+      const commandFromAlias = message.client.commands.find((cmd: Command) => cmd.aliases.includes(args[0]));
       if (commandFromAlias) command = commandFromAlias;
       else return;
     }
 
-    let neededPermissions = checkPermissions(
-      message.member,
-      command.permissions
-    );
+    const neededPermissions = checkPermissions(message.member, command.permissions);
     if (neededPermissions !== null)
       return sendTimedMessage(
         `
             You don't have enough permissions to use this command. 
-            \n Needed permissions: ${neededPermissions.join(", ")}
+            \n Needed permissions: ${neededPermissions.join(', ')}
             `,
         message.channel,
-        5000
+        5000,
       );
 
     command.execute(message, args, data);

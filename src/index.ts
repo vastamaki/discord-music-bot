@@ -1,26 +1,24 @@
-import "dotenv/config";
-
+import { readdirSync } from 'node:fs';
+import { join } from 'node:path';
 import {
-  Client,
-  GatewayIntentBits,
-  Collection,
-  TextChannel,
-  Message,
-  Events,
-  ModalBuilder,
   ActionRowBuilder,
+  Client,
+  Collection,
+  Events,
+  GatewayIntentBits,
+  InteractionType,
+  type Message,
+  type ModalActionRowComponentBuilder,
+  ModalBuilder,
+  type TextChannel,
   TextInputBuilder,
   TextInputStyle,
-  InteractionType,
-  ModalActionRowComponentBuilder,
-} from "discord.js";
-import { Command, SlashCommand } from "./types";
-import { readdirSync } from "fs";
-import { join } from "path";
-import { GuildQueue, GuildQueuePlayerNode, Player } from "discord-player";
-import knex from "./libs/database/index";
-import db from "./libs/database/index";
-import { YoutubeiExtractor } from "discord-player-youtubei";
+} from 'discord.js';
+import { type GuildQueue, GuildQueuePlayerNode, Player } from 'discord-player';
+import { YoutubeSabrExtractor } from 'discord-player-googlevideo';
+import { runMigrations } from 'src/lib/db';
+import { guilds } from 'src/lib/db/services';
+import type { Command, SlashCommand } from './types';
 
 const client = new Client({
   intents: [
@@ -31,35 +29,29 @@ const client = new Client({
   ],
 });
 
-const getEmbedMessage = async (queue: GuildQueue<any>): Promise<Message> => {
-  const guild = await db("guilds")
-    .select("music_channel_id", "message_id")
-    .where("id", "=", queue.guild.id)
-    .first();
+const getEmbedMessage = async (queue: GuildQueue): Promise<Message> => {
+  const guild = await guilds.findGuildById(queue.guild.id);
 
-  const channel = (await client.channels.fetch(
-    guild.music_channel_id
-  )) as TextChannel;
+  if (!guild?.musicChannelId || !guild?.messageId) {
+    throw new Error('Music channel or message not configured');
+  }
 
-  return channel.messages.fetch(guild.message_id);
+  const channel = (await client.channels.fetch(guild.musicChannelId)) as TextChannel;
+
+  return channel.messages.fetch(guild.messageId);
 };
 
-const mapQueue = (queue: GuildQueue<any>) => {
+const mapQueue = (queue: GuildQueue) => {
   return queue.tracks.data.length > 0
     ? queue.tracks.data
-        .map(
-          (track, index) =>
-            `${index + 1}. ${track.title} - ${track.author} \n Added by: ${
-              track.requestedBy
-            }`
-        )
-        .join("\n")
-    : "Tyhjää täynnä.";
+        .map((track, index) => `${index + 1}. ${track.title} - ${track.author} \n Added by: ${track.requestedBy}`)
+        .join('\n')
+    : 'Tyhjää täynnä.';
 };
 
 client.on(Events.InteractionCreate, async (interaction) => {
   if (interaction.isButton()) {
-    if (interaction.customId === "ullatus") {
+    if (interaction.customId === 'ullatus') {
       await interaction.deferUpdate();
 
       if (!interaction.guildId) return;
@@ -71,7 +63,9 @@ client.on(Events.InteractionCreate, async (interaction) => {
       let guildQueue = client.player.queues.get(interaction.guildId);
 
       const guild = client.guilds.cache.get(interaction.guildId);
-      const member = guild?.members.cache.get(interaction.member?.user.id!);
+      const userId = interaction.member?.user?.id;
+      if (!userId) return;
+      const member = guild?.members.cache.get(userId);
       const voiceChannel = member?.voice.channel;
 
       if (!guildQueue) {
@@ -84,13 +78,10 @@ client.on(Events.InteractionCreate, async (interaction) => {
 
         queue.skip();
 
-        client.player.play(
-          voiceChannel?.id as string,
-          "https://www.youtube.com/watch?v=dQw4w9WgXcQ"
-        );
+        client.player.play(voiceChannel?.id as string, 'https://www.youtube.com/watch?v=dQw4w9WgXcQ');
       }
     }
-    if (interaction.customId === "skip") {
+    if (interaction.customId === 'skip') {
       await interaction.deferUpdate();
 
       if (!interaction.guildId) return;
@@ -106,18 +97,15 @@ client.on(Events.InteractionCreate, async (interaction) => {
       return;
     }
 
-    if (interaction.customId === "modify-queue") {
-      const modal = new ModalBuilder()
-        .setCustomId("modify-queue-modal")
-        .setTitle("Remove songs from queue");
+    if (interaction.customId === 'modify-queue') {
+      const modal = new ModalBuilder().setCustomId('modify-queue-modal').setTitle('Remove songs from queue');
 
-      const firstActionRow =
-        new ActionRowBuilder<ModalActionRowComponentBuilder>().addComponents(
-          new TextInputBuilder()
-            .setCustomId("songToRemove")
-            .setLabel("Give song position to remove")
-            .setStyle(TextInputStyle.Short)
-        );
+      const firstActionRow = new ActionRowBuilder<ModalActionRowComponentBuilder>().addComponents(
+        new TextInputBuilder()
+          .setCustomId('songToRemove')
+          .setLabel('Give song position to remove')
+          .setStyle(TextInputStyle.Short),
+      );
 
       modal.addComponents(firstActionRow);
 
@@ -126,16 +114,14 @@ client.on(Events.InteractionCreate, async (interaction) => {
   }
 
   if (interaction.type === InteractionType.ModalSubmit) {
-    if (interaction.customId === "modify-queue-modal") {
-      const response = interaction.fields.getTextInputValue("songToRemove");
+    if (interaction.customId === 'modify-queue-modal') {
+      const response = interaction.fields.getTextInputValue('songToRemove');
 
-      const guildQueue = interaction.client.player.queues.get(
-        interaction.guildId as string
-      );
+      const guildQueue = interaction.client.player.queues.get(interaction.guildId as string);
 
       const queue = new GuildQueuePlayerNode(guildQueue as GuildQueue);
 
-      const song = guildQueue?.tracks.at(parseInt(response) - 1);
+      const song = guildQueue?.tracks.at(parseInt(response, 10) - 1);
 
       if (song) {
         queue.remove(song);
@@ -147,16 +133,23 @@ client.on(Events.InteractionCreate, async (interaction) => {
 });
 
 (async () => {
-  await knex.migrate.latest();
+  try {
+    await runMigrations();
+  } catch (error) {
+    console.error('Error running migrations:', error);
+    process.exit(1);
+  }
 
   client.slashCommands = new Collection<string, SlashCommand>();
   client.commands = new Collection<string, Command>();
   client.cooldowns = new Collection<string, number>();
-  client.player = new Player(client);
+  client.player = new Player(client, {
+    skipFFmpeg: false,
+  });
 
-  await client.player.extractors.register(YoutubeiExtractor, {});
+  await client.player.extractors.register(YoutubeSabrExtractor, {});
 
-  client.player.events.on("playerStart", async (queue, track) => {
+  client.player.events.on('playerStart', async (queue, track) => {
     const embedMessage = await getEmbedMessage(queue);
 
     embedMessage.embeds[0].fields[0].value = `${track.title} - ${track.author} (${track.duration}) \n Added by: ${track.requestedBy}`;
@@ -168,7 +161,7 @@ client.on(Events.InteractionCreate, async (interaction) => {
     });
   });
 
-  client.player.events.on("audioTrackRemove", async (queue, track) => {
+  client.player.events.on('audioTrackRemove', async (queue, _track) => {
     const embedMessage = await getEmbedMessage(queue);
 
     embedMessage.embeds[0].fields[2].value = mapQueue(queue);
@@ -178,47 +171,37 @@ client.on(Events.InteractionCreate, async (interaction) => {
     });
   });
 
-  client.player.events.on("connection", async (queue) => {
+  client.player.events.on('connection', async (queue) => {
     const embedMessage = await getEmbedMessage(queue);
 
-    embedMessage.embeds[0].fields[2].value = "Tyhjää täynnä.";
+    embedMessage.embeds[0].fields[2].value = 'Tyhjää täynnä.';
 
     await embedMessage.edit({
       embeds: [embedMessage.embeds[0]],
     });
   });
 
-  client.player.events.on("emptyQueue", async (queue) => {
+  client.player.events.on('emptyQueue', async (queue) => {
     const embedMessage = await getEmbedMessage(queue);
 
-    embedMessage.embeds[0].fields[2].value = "Jono on tyhjä";
+    embedMessage.embeds[0].fields[2].value = 'Jono on tyhjä';
 
     await embedMessage.edit({
       embeds: [embedMessage.embeds[0]],
     });
   });
 
-  client.player.events.on("playerFinish", async (queue) => {
+  client.player.events.on('playerFinish', async (queue) => {
     const embedMessage = await getEmbedMessage(queue);
 
-    embedMessage.embeds[0].fields[0].value = "Pelaamisen &ääniä";
+    embedMessage.embeds[0].fields[0].value = 'Pelaamisen &ääniä';
 
     await embedMessage.edit({
       embeds: [embedMessage.embeds[0]],
     });
   });
 
-  client.player.events.on("audioTrackAdd", async (queue, track) => {
-    const embedMessage = await getEmbedMessage(queue);
-
-    embedMessage.embeds[0].fields[2].value = mapQueue(queue);
-
-    await embedMessage.edit({
-      embeds: [embedMessage.embeds[0]],
-    });
-  });
-
-  client.player.events.on("audioTrackRemove", async (queue, track) => {
+  client.player.events.on('audioTrackAdd', async (queue, _track) => {
     const embedMessage = await getEmbedMessage(queue);
 
     embedMessage.embeds[0].fields[2].value = mapQueue(queue);
@@ -228,40 +211,52 @@ client.on(Events.InteractionCreate, async (interaction) => {
     });
   });
 
-  client.player.events.on("disconnect", async (queue) => {
+  client.player.events.on('audioTrackRemove', async (queue, _track) => {
     const embedMessage = await getEmbedMessage(queue);
 
-    embedMessage.embeds[0].fields[0].value = "Ikävän hiljaista...";
-    embedMessage.embeds[0].fields[2].value = "Jono on tyhjä";
+    embedMessage.embeds[0].fields[2].value = mapQueue(queue);
 
     await embedMessage.edit({
       embeds: [embedMessage.embeds[0]],
     });
   });
 
-  client.player.events.on("emptyChannel", async (queue) => {
+  client.player.events.on('disconnect', async (queue) => {
     const embedMessage = await getEmbedMessage(queue);
 
-    embedMessage.embeds[0].fields[0].value = "Ikävän hiljaista...";
-    embedMessage.embeds[0].fields[2].value = "Jono on tyhjä";
+    embedMessage.embeds[0].fields[0].value = 'Ikävän hiljaista...';
+    embedMessage.embeds[0].fields[2].value = 'Jono on tyhjä';
 
     await embedMessage.edit({
       embeds: [embedMessage.embeds[0]],
     });
   });
 
-  const handlersDir = join(__dirname, "./handlers");
+  client.player.events.on('emptyChannel', async (queue) => {
+    const embedMessage = await getEmbedMessage(queue);
+
+    embedMessage.embeds[0].fields[0].value = 'Ikävän hiljaista...';
+    embedMessage.embeds[0].fields[2].value = 'Jono on tyhjä';
+
+    await embedMessage.edit({
+      embeds: [embedMessage.embeds[0]],
+    });
+  });
+
+  const handlersDir = join(__dirname, './handlers');
 
   readdirSync(handlersDir).forEach((handler) => {
-    require(`${handlersDir}/${handler}`)(client);
+    const handlerModule = require(`${handlersDir}/${handler}`);
+    const handlerFunction = handlerModule.default || handlerModule;
+    handlerFunction(client);
   });
 
   process
-    .on("unhandledRejection", (reason, p) => {
-      console.error(reason, "Unhandled Rejection at Promise", p);
+    .on('unhandledRejection', (reason, p) => {
+      console.error(reason, 'Unhandled Rejection at Promise', p);
     })
-    .on("uncaughtException", (err) => {
-      console.error(err, "Uncaught Exception thrown");
+    .on('uncaughtException', (err) => {
+      console.error(err, 'Uncaught Exception thrown');
       process.exit(1);
     });
 

@@ -1,17 +1,43 @@
-version: "3"
-
 services:
+  postgres:
+    image: postgres:18.1-alpine
+    container_name: discord-bot-postgres-dev
+    environment:
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: ${DB_NAME}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_dev_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - bot-network
+
   bot:
-    container_name: discord-music-bot
-    build:
-      dockerfile: Dockerfile
-    pull_policy: build
+    container_name: discord-music-bot-dev
+    image: oven/bun:1.3.5
+    working_dir: /usr/src/app
+    command: sh -c "apt-get update && apt-get install -y ffmpeg && bun install && bun --watch src/index.ts"
     env_file:
-      - stack.env
+      - .env
+    volumes:
+      - .:/usr/src/app
+      - /usr/src/app/node_modules
+    depends_on:
+      postgres:
+        condition: service_healthy
     restart: unless-stopped
     networks:
-      macvlan:
+      - bot-network
 
 networks:
-  macvlan:
-    external: true
+  bot-network:
+    driver: bridge
+
+volumes:
+  postgres_dev_data:

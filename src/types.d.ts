@@ -1,26 +1,28 @@
-import { Player } from "discord-player";
-import {
-  SlashCommandBuilder,
-  CommandInteraction,
-  Collection,
-  PermissionResolvable,
-  Message,
+import type {
   AutocompleteInteraction,
   ChatInputCommandInteraction,
-} from "discord.js";
+  Message,
+  PermissionResolvable,
+  SlashCommandBuilder,
+  SlashCommandSubcommandsOnlyBuilder,
+} from 'discord.js';
+import type { Player } from 'discord-player';
 
 export interface SlashCommand {
-  command: SlashCommandBuilder | any;
-  execute: (interaction: ChatInputCommandInteraction, data: any) => void;
+  command: SlashCommandBuilder | SlashCommandSubcommandsOnlyBuilder;
+  execute: (interaction: ChatInputCommandInteraction, data) => void;
   autocomplete?: (interaction: AutocompleteInteraction) => void;
   cooldown?: number; // in seconds
 }
 
 export interface ChannelData {
   id: string;
-  owner_id: string;
+  ownerId: string;
   prefix: string;
-  music_channel_id: string;
+  musicChannelId: string | null;
+  messageId: string | null;
+  createdAt: Date;
+  updatedAt: Date;
 }
 
 export interface Command {
@@ -42,17 +44,7 @@ export interface BotEvent {
   execute: (...args) => void;
 }
 
-declare global {
-  namespace NodeJS {
-    interface ProcessEnv {
-      TOKEN: string;
-      CLIENT_ID: string;
-      PREFIX: string;
-    }
-  }
-}
-
-declare module "discord.js" {
+declare module 'discord.js' {
   export interface Client {
     slashCommands: Collection<string, SlashCommand>;
     commands: Collection<string, Command>;

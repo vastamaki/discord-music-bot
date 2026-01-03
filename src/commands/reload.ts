@@ -1,8 +1,8 @@
-import { Command } from "../types";
+import type { Command } from 'src/types';
 
 const command: Command = {
-  name: "reload",
-  aliases: ["r"],
+  name: 'reload',
+  aliases: ['r'],
   permissions: [],
   execute: async (message, args) => {
     const commandName = args[1];
@@ -23,9 +23,7 @@ const command: Command = {
       await message.reply(`Command ${newCommand.name} reloaded`);
     } catch (error) {
       console.error(error);
-      await message.reply(
-        `There was an error while reloading a command ${command.name} :\n ${error.message}`
-      );
+      await message.reply(`There was an error while reloading a command ${command.name} :\n ${error.message}`);
     }
   },
 };

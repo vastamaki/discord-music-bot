@@ -1,31 +1,29 @@
-import { Client } from "discord.js";
-import { BotEvent } from "../types";
-import { color } from "../functions";
-import db, { tables } from "../libs/database";
+import type { Client } from 'discord.js';
+import { guilds } from 'src/lib/db/services';
+import { color } from '../functions';
+import type { BotEvent } from '../types';
 
 const event: BotEvent = {
-  name: "ready",
+  name: 'clientReady',
   once: true,
   execute: async (client: Client) => {
-    console.log(
-      color("text", `💪 Logged in as ${color("variable", client.user?.tag)}`)
-    );
+    console.log(color('text', `💪 Logged in as ${color('variable', client.user?.tag ?? 'Unknown')}`));
 
     client.user?.setPresence({
-      activities: [{ name: "you", type: 3 }],
-      status: "online",
+      activities: [{ name: 'you', type: 3 }],
+      status: 'online',
     });
 
-    const guilds = await db(tables.guilds).select("*");
+    const allGuilds = await guilds.findAllGuilds();
 
     for (const [_, guild] of client.guilds.cache) {
-      const result = guilds.find((g) => g.id === guild.id);
+      const result = allGuilds.find((g) => g.id === guild.id);
 
       if (!result) {
-        await db(tables.guilds).insert({
+        await guilds.createGuild({
           id: guild.id,
-          prefix: ";",
-          owner_id: guild.ownerId,
+          prefix: ';',
+          ownerId: guild.ownerId,
         });
       }
     }

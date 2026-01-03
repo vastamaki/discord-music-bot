@@ -1,26 +1,24 @@
-import { GuildQueue, GuildQueuePlayerNode, QueryType } from "discord-player";
-import ytdl from "@distube/ytdl-core";
-import db, { tables } from "../libs/database";
-import { Command } from "../types";
-import { TextChannel } from "discord.js";
+import type { TextChannel } from 'discord.js';
+import { type GuildQueue, GuildQueuePlayerNode } from 'discord-player';
+import { bannedUrls, bannedWords, playHistory } from 'src/lib/db/services';
+import { ytdlService } from 'src/lib/ytdl';
+import type { Command } from '../types';
 
 const command: Command = {
-  name: "play",
-  aliases: ["p"],
+  name: 'play',
+  aliases: ['p'],
   permissions: [],
   execute: async (message, args) => {
     const voiceChannelId = message.member?.voice.channel?.id;
 
     if (!voiceChannelId) {
-      return message.reply(
-        "Please join to voice channel before using this command"
-      );
+      return message.reply('Please join to voice channel before using this command');
     }
 
-    const search = args.slice(1).join(" ");
+    const search = args.slice(1).join(' ');
 
     if (!search) {
-      return message.reply("No search or url provided :(");
+      return message.reply('No search or url provided :(');
     }
 
     await message.delete();
@@ -32,9 +30,26 @@ const command: Command = {
 
     const guildQueue = new GuildQueuePlayerNode(queue as GuildQueue);
 
-    const isUrl = ytdl.validateURL(search);
+    const isUrl = ytdlService.validateURL(search);
 
-    const result = await message.client.player.search(search, {
+    // If not a URL, search YouTube first to get a direct link
+    let searchQuery = search;
+    if (!isUrl) {
+      const youtubeUrl = await ytdlService.search(search);
+      if (!youtubeUrl) {
+        const channel = message.channel as TextChannel;
+        const msg = await channel.send({
+          content: 'No results found :(',
+        });
+        setTimeout(() => {
+          msg.delete();
+        }, 5000);
+        return;
+      }
+      searchQuery = youtubeUrl;
+    }
+
+    const result = await message.client.player.search(searchQuery, {
       requestedBy: message.member,
     });
 
@@ -42,7 +57,7 @@ const command: Command = {
       const channel = message.channel as TextChannel;
 
       const msg = await channel.send({
-        content: "No results found :(",
+        content: 'No results found :(',
       });
 
       setTimeout(() => {
@@ -54,38 +69,29 @@ const command: Command = {
 
     const song = result.tracks[0];
 
-    const video_id = ytdl.getURLVideoID(song.url);
+    const video_id = ytdlService.getVideoID(song.url);
 
-    const isBannedUrl = await db(tables.bannedUrls)
-      .select("*")
-      .where("video_id", "=", video_id)
-      .first();
+    const isBannedUrl = await bannedUrls.findBannedUrlByVideoId(video_id);
 
     if (isBannedUrl) {
       const channel = message.channel as TextChannel;
 
       channel.send({
-        content: "homo homo homo homo :D Tällästä paskaa ei täällä kuunnella",
+        content: 'homo homo homo homo :D Tällästä paskaa ei täällä kuunnella',
       });
 
       return;
     }
 
-    const bannedWords = await db(tables.bannedWords)
-      .select("*")
-      .where("guild_id", "=", message.guildId);
+    const bannedWordsList = await bannedWords.findBannedWordsByGuildId(message.guildId ?? '');
 
-    const bannedWordsList = bannedWords.map((entry) =>
-      entry.keyword.toLowerCase().split(" ")
-    );
+    const bannedWordsArray = bannedWordsList.map((entry) => entry.keyword.toLowerCase().split(' '));
 
-    const song_title = song.title
-      .split(" ")
-      .map((entry) => entry.toLowerCase());
+    const song_title = song.title.split(' ').map((entry) => entry.toLowerCase());
 
     let foundBannedWord = false;
 
-    for (const array of bannedWordsList) {
+    for (const array of bannedWordsArray) {
       let all_strings_found = true;
       for (const string of array) {
         if (!song_title.includes(string)) {
@@ -103,7 +109,7 @@ const command: Command = {
       const channel = message.channel as TextChannel;
 
       channel.send({
-        content: "homo homo homo homo :D Paska biisi on banaanisaarilla",
+        content: 'homo homo homo homo :D Paska biisi on banaanisaarilla',
       });
       return;
     }
@@ -114,13 +120,13 @@ const command: Command = {
       guildQueue.play();
     }
 
-    await db(tables.playHistory).insert({
-      video_id: video_id,
-      user_id: message.member?.id,
-      username: message.member.user.username,
-      search_string: isUrl ? "" : search,
-      result_url: song.url,
-      result_name: song_title.join(" "),
+    await playHistory.createPlayHistory({
+      videoId: video_id,
+      userId: message.member?.id ?? '',
+      username: message.member?.user.username ?? '',
+      searchString: isUrl ? '' : search,
+      resultUrl: song.url,
+      resultName: song_title.join(' '),
     });
   },
 };
