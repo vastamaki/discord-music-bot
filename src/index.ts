@@ -15,7 +15,7 @@ import {
   TextInputStyle,
 } from 'discord.js';
 import { type GuildQueue, GuildQueuePlayerNode, Player } from 'discord-player';
-import { YoutubeSabrExtractor } from 'discord-player-googlevideo';
+import { YoutubeiExtractor } from 'discord-player-youtubei';
 import { runMigrations } from 'src/lib/db';
 import { guilds } from 'src/lib/db/services';
 import type { Command, SlashCommand } from './types';
@@ -147,7 +147,7 @@ client.on(Events.InteractionCreate, async (interaction) => {
     skipFFmpeg: false,
   });
 
-  await client.player.extractors.register(YoutubeSabrExtractor, {});
+  await client.player.extractors.register(YoutubeiExtractor, {});
 
   client.player.events.on('playerStart', async (queue, track) => {
     const embedMessage = await getEmbedMessage(queue);
